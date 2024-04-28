@@ -25,7 +25,7 @@ loginForm.addEventListener('submit', async (event) => {
   const loginPassword = loginPasswordInput.value;
 
   try {
-    const response = await fetch('http://localhost:3000/login', {
+    const response = await fetch('se-project-server.vercel.app', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ signupForm.addEventListener('submit', async (event) => {
 
   // console.log()
   try {
-    const response = await fetch('http://localhost:3000/signup', {
+    const response = await fetch('se-project-server.vercel.app', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
