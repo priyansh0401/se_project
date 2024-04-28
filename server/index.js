@@ -11,6 +11,10 @@ const app = express();
 // Enable CORS
 app.use(cors());
 
+// Parse request bodies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Custom error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
