@@ -9,21 +9,21 @@ dotenv.config({ path: ".env.local" });
 
 const app = express();
 
-app.get("/", (req, res) => {
-  const domain = "se-project-server.vercel.app";
-  res.send(`Express on ${domain}`);
-});
+// app.get("/", (req, res) => {
+//   const domain = "se-project-server.vercel.app";
+//   res.send(`Express on ${domain}`);
+// });
 
 
 app.use(cors());
 const port = process.env.PORT || 3000;
 
 
-app.listen(port, () => {
-  console.log(`Server ready on port ${port}`);
-});
+// app.listen(port, () => {
+//   console.log(`Server ready on port ${port}`);
+// });
 
-module.exports = app;
+// module.exports = app;
 
 
 // Connect to Redis
