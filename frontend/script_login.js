@@ -25,8 +25,7 @@ loginForm.addEventListener('submit', async (event) => {
   const loginPassword = loginPasswordInput.value;
 
   try {
-    const response = await fetch('backend-psi-lemon.vercel.app
-', {
+    const response = await fetch('backend-psi-lemon.vercel.app', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
