@@ -8,6 +8,8 @@ const cors = require("cors");
 dotenv.config({ path: ".env.local" });
 
 const app = express();
+// Enable CORS
+app.use(cors());
 
 // Custom error handler
 app.use((err, req, res, next) => {
