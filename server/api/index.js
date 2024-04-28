@@ -26,7 +26,7 @@ const port = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
   const domain = "se-project-server.vercel.app";
-  res.send(`Express on ${domain}`);
+  res.send(`Express on bnb ${domain}`);
 });
 
 // Routes
