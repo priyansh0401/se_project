@@ -1,99 +1,87 @@
-const express = require("express")
-const path = require("path")
-const app = express()
-// const hbs = require("hbs")
-const LogInCollection = require("./mongo")
-const port = process.env.PORT || 3000
-app.use(express.json())
+const express = require("express");
+const bodyParser = require("body-parser");
+const bcrypt = require("bcrypt");
+const dotenv = require("dotenv");
+const cors = require("cors");
+// Load environment variables from .env.local file
+dotenv.config({ path: ".env.local" });
 
-app.use(express.urlencoded({ extended: false }))
+const app = express();
+// Enable CORS
+app.use(cors());
+// Parse request bodies
+app.use(express.json());
+// Custom error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send("Something went wrong.");
+});
+// Middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-const tempelatePath = path.join(__dirname, '../tempelates')
-const publicPath = path.join(__dirname, '../public')
-console.log(publicPath);
+// User model
+const users = { email: [""] };
+const port = process.env.PORT || 3000;
 
-app.set('view engine', 'hbs')
-app.set('views', tempelatePath)
-app.use(express.static(publicPath))
+app.get("/", (req, res) => {
+  const domain = "se-project-server.vercel.app";
+  res.send(`Express on ${domain}`);
+});
 
+// Routes
+app.post("/signup", async (req, res) => {
+  const { email, password } = req.body;
 
-// hbs.registerPartials(partialPath)
-
-
-app.get('/signup', (req, res) => {
-    res.render('signup')
-})
-app.get('/', (req, res) => {
-    res.render('login')
-})
-
-
-
-// app.get('/home', (req, res) => {
-//     res.render('home')
-// })
-
-app.post('/signup', async (req, res) => {
-    
-    // const data = new LogInCollection({
-    //     name: req.body.name,
-    //     password: req.body.password
-    // })
-    // await data.save()
-
-    const data = {
-        name: req.body.name,
-        password: req.body.password
+  try {
+    // Check if user already exists
+    if (users[email]) {
+      return res.status(400).send("User already exists");
     }
 
-    const checking = await LogInCollection.findOne({ name: req.body.name })
+    // Hash password
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
-   try{
-    if (checking.name === req.body.name && checking.password===req.body.password) {
-        res.send("user details already exists")
-    }
-    else{
-        await LogInCollection.insertMany([data])
-    }
-   }
-   catch{
-    res.send("wrong inputs")
-   }
+    // Create new user
+    users[email] = { email, password: password };
 
-    res.status(201).render("home", {
-        naming: req.body.name
-    })
-})
+    // Store user in Redis
+    // redisClient.set(email, JSON.stringify(users[email]));
 
+    return res.status(200).send("Signup successful");
+  } catch (err) {
+    return res.status(400).send(err);
+  }
+});
 
-app.post('/login', async (req, res) => {
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
 
-    try {
-        const check = await LogInCollection.findOne({ name: req.body.name })
-
-        if (check.password === req.body.password) {
-            res.status(201).render("home", { naming: `${req.body.password}+${req.body.name}` })
-        }
-
-        else {
-            res.send("incorrect password")
-        }
-
-
-    } 
-    
-    catch (e) {
-
-        res.send("wrong details")
-        
-
+  try {
+    // Find user by email
+    if (!users[email]) {
+      console.log("bad email");
+      return res.status(400).send("Invalid email or password");
     }
 
+    // Compare password
+    const validPassword = password == users[email].password;
+    if (!validPassword) {
+      console.log("bad password");
+      return res.status(400).send("Invalid email or password");
+    }
 
-})
+    console.log("success");
+    return res.status(200).send("Login successful");
+  } catch (err) {
+    console.log("catch", err);
+    return res.status(400).send(err);
+  }
+});
 
-
-
+// Start the server
 app.listen(port, () => {
-    console.log('port connected');
-})
+  console.log(`Server is running on http://localhost:${port}`);
+});
+
+module.exports = app;
