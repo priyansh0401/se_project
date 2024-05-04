@@ -1,75 +1,99 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const bodyParser = require('body-parser');
-const session = require('express-session');
+const express = require("express")
+const path = require("path")
+const app = express()
+// const hbs = require("hbs")
+const LogInCollection = require("./mongo")
+const port = process.env.PORT || 3000
+app.use(express.json())
 
-const app = express();
+app.use(express.urlencoded({ extended: false }))
 
-// Connect to the MongoDB database
-mongoose.connect('mongodb://localhost:27017/login-signup-app');
+const tempelatePath = path.join(__dirname, '../tempelates')
+const publicPath = path.join(__dirname, '../public')
+console.log(publicPath);
 
-// Create a Mongoose model for users
-const UserSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  password: {
-    type: String,
-    required: true
-  }
-});
+app.set('view engine', 'hbs')
+app.set('views', tempelatePath)
+app.use(express.static(publicPath))
 
-const User = mongoose.model('User', UserSchema);
 
-// Create an Express server
-app.use(bodyParser.json());
-app.use(session({
-  secret: 'my secret key',
-  resave: false,
-  saveUninitialized: true
-}));
+// hbs.registerPartials(partialPath)
 
-// Create a route for the login form
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
+app.get('/signup', (req, res) => {
+    res.render('signup')
+})
+app.get('/', (req, res) => {
+    res.render('login')
+})
 
-  if (!user) {
-    return res.status(400).send('Invalid email or password');
-  }
 
-  const isMatch = await bcrypt.compare(password, user.password);
 
-  if (!isMatch) {
-    return res.status(400).send('Invalid email or password');
-  }
+// app.get('/home', (req, res) => {
+//     res.render('home')
+// })
 
-  req.session.user = user;
-
-  res.send('Logged in successfully');
-});
-
-// Create a route for the signup form
 app.post('/signup', async (req, res) => {
-  const { email, password } = req.body;
+    
+    // const data = new LogInCollection({
+    //     name: req.body.name,
+    //     password: req.body.password
+    // })
+    // await data.save()
 
-  const user = new User({
-    email,
-    password: await bcrypt.hash(password, 10)
-  });
+    const data = {
+        name: req.body.name,
+        password: req.body.password
+    }
 
-  await user.save();
+    const checking = await LogInCollection.findOne({ name: req.body.name })
 
-  req.session.user = user;
+   try{
+    if (checking.name === req.body.name && checking.password===req.body.password) {
+        res.send("user details already exists")
+    }
+    else{
+        await LogInCollection.insertMany([data])
+    }
+   }
+   catch{
+    res.send("wrong inputs")
+   }
 
-  res.send('Signed up successfully');
-});
+    res.status(201).render("home", {
+        naming: req.body.name
+    })
+})
 
-// Start the Express server
-app.listen(3000, () => {
-  console.log('Server is listening on port 3000');
-});
+
+app.post('/login', async (req, res) => {
+
+    try {
+        const check = await LogInCollection.findOne({ name: req.body.name })
+
+        if (check.password === req.body.password) {
+            res.status(201).render("home", { naming: `${req.body.password}+${req.body.name}` })
+        }
+
+        else {
+            res.send("incorrect password")
+        }
+
+
+    } 
+    
+    catch (e) {
+
+        res.send("wrong details")
+        
+
+    }
+
+
+})
+
+
+
+app.listen(port, () => {
+    console.log('port connected');
+})
