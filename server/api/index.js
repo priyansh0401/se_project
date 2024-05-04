@@ -26,7 +26,7 @@ app.use((err, req, res, next) => {
 });
 
 // Connect to MongoDB
-mongoose.connect("mongodb+srv://pgoelbe22:<password>@login.ijfsgjd.mongodb.net/?retryWrites=true&w=majority&appName=login", { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect("mongodb+srv://pgoelbe22:projectlogin@login.ijfsgjd.mongodb.net/?retryWrites=true&w=majority&appName=login", { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Define user schema
 const userSchema = new mongoose.Schema({
