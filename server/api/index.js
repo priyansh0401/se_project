@@ -26,10 +26,14 @@ let db;
     db = client.db();
     console.log("Connected to MongoDB");
 
-    // Move the usersCollection assignment here
     const usersCollection = db.collection("users");
 
     const port = process.env.PORT || 3000;
+
+    // Start the server only after successful MongoDB connection
+    app.listen(port, () => {
+      console.log(`Server is running on http://localhost:${port}`);
+    });
 
     app.get("/", (req, res) => {
       const domain = "se-project-server.vercel.app";
@@ -81,14 +85,15 @@ let db;
         return res.status(400).send(err);
       }
     });
-
-    // Start the server
-    app.listen(port, () => {
-      console.log(`Server is running on http://localhost:${port}`);
-    });
   } catch (error) {
     console.error("Error connecting to MongoDB:", error);
   }
 })();
+
+// Global exception handler
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // You can also log the error to a logging service or handle it differently
+});
 
 module.exports = app;
