@@ -10,7 +10,13 @@ dotenv.config({ path: ".env.local" });
 
 const app = express();
 // Enable CORS
-app.use(cors());
+const corsOptions = {
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+  optionSuccessStatus: 200,
+};
+app.use(cors(corsOptions));
+
 // Parse request bodies
 app.use(express.json());
 // Custom error handler
@@ -20,7 +26,7 @@ app.use((err, req, res, next) => {
 });
 
 // Connect to MongoDB
-mongoose.connect("mongodb+srv://priyansh0401:projectlogin@login.rqsthm7.mongodb.net/?retryWrites=true&w=majority&appName=login", { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect("mongodb+srv://pgoelbe22:<password>@login.ijfsgjd.mongodb.net/?retryWrites=true&w=majority&appName=login", { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Define user schema
 const userSchema = new mongoose.Schema({
