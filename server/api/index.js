@@ -3,7 +3,8 @@ const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const MongoClient = require('mongodb').MongoClient;
+// Load environment variables from .env.local file
+dotenv.config({ path: ".env.local" });
 
 const app = express();
 // Enable CORS
@@ -18,19 +19,6 @@ app.use((err, req, res, next) => {
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-const mongoUrl = "mongodb+srv://pgoelbe22:seprojectlogin@login.ijfsgjd.mongodb.net/?retryWrites=true&w=majority&appName=login";
-let db;
-
-(async () => {
-  try {
-    const client = await MongoClient.connect(mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
-    db = client.db();
-    console.log("Connected to MongoDB");
-  } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
-  }
-})();
 
 // User model
 const users = { email: [""] };
@@ -47,21 +35,22 @@ app.post("/signup", async (req, res) => {
 
   try {
     // Check if user already exists
-    const existingUser = await db.collection('users').findOne({ email });
-    if (existingUser) {
+    if (users[email]) {
       return res.status(400).send("User already exists");
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user
-    const newUser = { email, password: hashedPassword };
-    await db.collection('users').insertOne(newUser);
+    users[email] = { email, password: password };
+
+    // Store user in Redis
+    // redisClient.set(email, JSON.stringify(users[email]));
 
     return res.status(200).send("Signup successful");
   } catch (err) {
-    return res.status(400).send(err.message);
+    return res.status(400).send(err);
   }
 });
 
@@ -70,14 +59,13 @@ app.post("/login", async (req, res) => {
 
   try {
     // Find user by email
-    const user = await db.collection('users').findOne({ email });
-    if (!user) {
+    if (!users[email]) {
       console.log("bad email");
       return res.status(400).send("Invalid email or password");
     }
 
     // Compare password
-    const validPassword = await bcrypt.compare(password, user.password);
+    const validPassword = password == users[email].password;
     if (!validPassword) {
       console.log("bad password");
       return res.status(400).send("Invalid email or password");
@@ -87,7 +75,7 @@ app.post("/login", async (req, res) => {
     return res.status(200).send("Login successful");
   } catch (err) {
     console.log("catch", err);
-    return res.status(400).send(err.message);
+    return res.status(400).send(err);
   }
 });
 
