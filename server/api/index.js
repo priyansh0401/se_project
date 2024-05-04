@@ -20,13 +20,26 @@ app.use((err, req, res, next) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// User model
-const users = { email: [""] };
+
+// Connect to MongoDB
+mongoose.connect("mongodb://localhost:27017", { useNewUrlParser: true, useUnifiedTopology: true });
+
+// Define user schema
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true }
+});
+
+// Create user model
+const User = mongoose.model("User", userSchema);
+
+
 const port = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
   const domain = "se-project-server.vercel.app";
-  res.send(`Express on ${domain}`);
+  // res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND_URL);
+  res.send(`Express on bnb ${domain}`);
 });
 
 // Routes
@@ -35,18 +48,17 @@ app.post("/signup", async (req, res) => {
 
   try {
     // Check if user already exists
-    if (users[email]) {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
       return res.status(400).send("User already exists");
     }
 
     // Hash password
-    // const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user
-    users[email] = { email, password: password };
-
-    // Store user in Redis
-    // redisClient.set(email, JSON.stringify(users[email]));
+    const user = new User({ email, password: hashedPassword });
+    await user.save();
 
     return res.status(200).send("Signup successful");
   } catch (err) {
@@ -59,22 +71,19 @@ app.post("/login", async (req, res) => {
 
   try {
     // Find user by email
-    if (!users[email]) {
-      console.log("bad email");
+    const user = await User.findOne({ email });
+    if (!user) {
       return res.status(400).send("Invalid email or password");
     }
 
     // Compare password
-    const validPassword = password == users[email].password;
+    const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      console.log("bad password");
       return res.status(400).send("Invalid email or password");
     }
 
-    console.log("success");
     return res.status(200).send("Login successful");
   } catch (err) {
-    console.log("catch", err);
     return res.status(400).send(err);
   }
 });
