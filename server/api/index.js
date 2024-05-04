@@ -3,10 +3,8 @@ const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const MongoClient = require("mongodb").MongoClient;
-
-// Load environment variables from.env.local file
-// dotenv.config({ path: ".env.local" });
+// Load environment variables from .env.local file
+dotenv.config({ path: ".env.local" });
 
 const app = express();
 // Enable CORS
@@ -22,21 +20,9 @@ app.use((err, req, res, next) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// User model
+const users = { email: [""] };
 const port = process.env.PORT || 3000;
-
-// MongoDB connection
-const mongoUrl = "mongodb+srv://pgoelbe22:#@1$Apple@moneymindslogin.0ng72cs.mongodb.net/?retryWrites=true&w=majority&appName=moneymindslogin";
-const dbName = "moneymindslogin";
-let db;
-
-MongoClient.connect(mongoUrl, (err, client) => {
-  if (err) {
-    console.error(err);
-    process.exit(1);
-  }
-  db = client.db(dbName);
-  console.log(`Connected to MongoDB database: ${dbName}`);
-});
 
 app.get("/", (req, res) => {
   const domain = "se-project-server.vercel.app";
@@ -49,17 +35,18 @@ app.post("/signup", async (req, res) => {
 
   try {
     // Check if user already exists
-    const user = await db.collection("users").findOne({ email });
-    if (user) {
+    if (users[email]) {
       return res.status(400).send("User already exists");
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user
-    const newUser = { email, password: hashedPassword };
-    await db.collection("users").insertOne(newUser);
+    users[email] = { email, password: password };
+
+    // Store user in Redis
+    // redisClient.set(email, JSON.stringify(users[email]));
 
     return res.status(200).send("Signup successful");
   } catch (err) {
@@ -72,19 +59,22 @@ app.post("/login", async (req, res) => {
 
   try {
     // Find user by email
-    const user = await db.collection("users").findOne({ email });
-    if (!user) {
+    if (!users[email]) {
+      console.log("bad email");
       return res.status(400).send("Invalid email or password");
     }
 
     // Compare password
-    const validPassword = await bcrypt.compare(password, user.password);
+    const validPassword = password == users[email].password;
     if (!validPassword) {
+      console.log("bad password");
       return res.status(400).send("Invalid email or password");
     }
 
+    console.log("success");
     return res.status(200).send("Login successful");
   } catch (err) {
+    console.log("catch", err);
     return res.status(400).send(err);
   }
 });
