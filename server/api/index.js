@@ -22,12 +22,26 @@ const uri = process.env.MONGODB_URL;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
 async function connect() {
-  if (!client.isConnected()) await client.connect();
-  return client.db();
+  try {
+    if (!client.isConnected()) {
+      await client.connect();
+    }
+    return client.db();
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+    throw error;
+  }
 }
 
 async function disconnect() {
-  if (client.isConnected()) await client.close();
+  try {
+    if (client.isConnected()) {
+      await client.close();
+    }
+  } catch (error) {
+    console.error("Error disconnecting from MongoDB:", error);
+    throw error;
+  }
 }
 
 app.use((req, res, next) => {
@@ -50,7 +64,7 @@ usersRouter.post("/signup", async (req, res) => {
     const result = await usersCollection.insertOne(user);
     res.status(201).send(`User created with id ${result.insertedId}`);
   } catch (error) {
-    console.error(error);
+    console.error("Error creating user:", error);
     res.status(500).send("Error creating user");
   }
 });
@@ -72,7 +86,7 @@ usersRouter.post("/login", async (req, res) => {
     }
     res.send(`Logged in as ${username}`);
   } catch (error) {
-    console.error(error);
+    console.error("Error logging in:", error);
     res.status(500).send("Error logging in");
   }
 });
@@ -86,6 +100,11 @@ app.listen(port, () => {
 });
 
 process.on("SIGINT", async () => {
-  await disconnect();
-  process.exit(0);
+  try {
+    await disconnect();
+    process.exit(0);
+  } catch (error) {
+    console.error("Error disconnecting from MongoDB:", error);
+    process.exit(1);
+  }
 });
