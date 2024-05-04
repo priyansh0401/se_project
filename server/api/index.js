@@ -18,11 +18,30 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+
+
+
+
+// Enable CORS for all origins
+app.use(cors());
+
 // Set Access-Control-Allow-Origin for all routes
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND_URL);
+  res.setHeader("Access-Control-Allow-Origin", "*");
   next();
 });
+
+
+
+
+
+
+
+// // Set Access-Control-Allow-Origin for all routes
+// app.use((req, res, next) => {
+//   res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND_URL);
+//   next();
+// });
 
 // Parse request bodies
 app.use(express.json());
