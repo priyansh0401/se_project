@@ -26,7 +26,7 @@ app.use((err, req, res, next) => {
 });
 
 // Connect to MongoDB
-mongoose.connect("mongodb+srv://pgoelbe22:projectlogin@login.ijfsgjd.mongodb.net/?retryWrites=true&w=majority&appName=login", { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect("mongodb://localhost:27017", { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Define user schema
 const userSchema = new mongoose.Schema({
@@ -45,6 +45,7 @@ const port = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
   const domain = "se-project-server.vercel.app";
+  res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND_URL);
   res.send(`Express on bnb ${domain}`);
 });
 
