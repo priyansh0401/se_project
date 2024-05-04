@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const cors = require("cors");
-const { MongoClient } = require("mongodb");
+const MongoClient = require('mongodb').MongoClient;
 
 const app = express();
 // Enable CORS
@@ -19,13 +19,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const mongoUrl = "mongodb+srv://pgoelbe22:seprojectlogin@login.ijfsgjd.mongodb.net/?retryWrites=true&w=majority&appName=login";
-const client = new MongoClient(mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
-
 let db;
 
 (async () => {
   try {
-    await client.connect();
+    const client = await MongoClient.connect(mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
     db = client.db();
     console.log("Connected to MongoDB");
   } catch (error) {
@@ -57,7 +55,8 @@ app.post("/signup", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user
-    const result = await usersCollection.insertOne({ email, password: hashedPassword });
+    const newUser = { email, password: hashedPassword };
+    await usersCollection.insertOne(newUser);
 
     return res.status(200).send("Signup successful");
   } catch (err) {
