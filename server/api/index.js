@@ -1,99 +1,96 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const bodyParser = require('body-parser');
-const session = require('express-session');
+const express = require("express");
+const bodyParser = require("body-parser");
+const bcrypt = require("bcrypt");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const mongoose = require("mongoose");
+
+// Load environment variables from.env.local file
+dotenv.config({ path: ".env.local" });
 
 const app = express();
+// Enable CORS
+app.use(cors());
+// Parse request bodies
+app.use(express.json());
+// Custom error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send("Something went wrong.");
+});
 
-// Connect to the MongoDB database
-mongoose.connect('mongodb+srv://priyansh0401:projectlogin@login.rqsthm7.mongodb.net/?retryWrites=true&w=majority&appName=login', { useNewUrlParser: true, useUnifiedTopology: true });
+// Connect to MongoDB
+mongoose.connect("mongodb+srv://priyansh0401:projectlogin@login.rqsthm7.mongodb.net/?retryWrites=true&w=majority&appName=login", { useNewUrlParser: true, useUnifiedTopology: true });
 
-// Create a Mongoose model for users
+// Define user schema
 const userSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  password: {
-    type: String,
-    required: true
-  }
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true }
 });
 
-const User = mongoose.model('User', userSchema);
+// Create user model
+const User = mongoose.model("User", userSchema);
 
-// Create an Express server
+// Middleware
 app.use(bodyParser.json());
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: true
-}));
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Create a route for the login form
-app.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
+const port = process.env.PORT || 3000;
 
-    if (!email ||!password) {
-      return res.status(400).send('Email and password are required');
-    }
-
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(400).send('Invalid email or password');
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(400).send('Invalid email or password');
-    }
-
-    req.session.user = user;
-
-    res.send('Logged in successfully');
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Error logging in');
-  }
+app.get("/", (req, res) => {
+  const domain = "se-project-server.vercel.app";
+  res.send(`Express on bnb ${domain}`);
 });
 
-// Create a route for the signup form
-app.post('/signup', async (req, res) => {
+// Routes
+app.post("/signup", async (req, res) => {
+  const { email, password } = req.body;
+
   try {
-    const { email, password } = req.body;
-
-    if (!email ||!password) {
-      return res.status(400).send('Email and password are required');
-    }
-
+    // Check if user already exists
     const existingUser = await User.findOne({ email });
-
     if (existingUser) {
-      return res.status(400).send('Email already exists');
+      return res.status(400).send("User already exists");
     }
 
-    const user = new User({
-      email,
-      password: await bcrypt.hash(password, 10)
-    });
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create new user
+    const user = new User({ email, password: hashedPassword });
     await user.save();
 
-    req.session.user = user;
-
-    res.send('Signed up successfully');
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Error signing up');
+    return res.status(200).send("Signup successful");
+  } catch (err) {
+    return res.status(400).send(err);
   }
 });
 
-// Start the Express server
-app.listen(3000, () => {
-  console.log('Server is listening on port 3000');
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).send("Invalid email or password");
+    }
+
+    // Compare password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(400).send("Invalid email or password");
+    }
+
+    return res.status(200).send("Login successful");
+  } catch (err) {
+    return res.status(400).send(err);
+  }
 });
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+});
+
+module.exports = app;
