@@ -32,61 +32,63 @@ let db;
 MongoClient.connect(mongoUrl, (err, client) => {
   if (err) {
     console.error(err);
-    process.exit(1);
+    return res.status(500).send("Error connecting to MongoDB");
   }
   db = client.db(dbName);
   console.log(`Connected to MongoDB database: ${dbName}`);
-});
 
-app.get("/", (req, res) => {
-  const domain = "se-project-server.vercel.app";
-  res.send(`Express on bnb ${domain}`);
-});
+  // Define routes only after the database connection is established
+  app.get("/", (req, res) => {
+    const domain = "se-project-server.vercel.app";
+    res.send(`Express on ${domain}`);
+  });
 
-// Routes
-app.post("/signup", async (req, res) => {
-  const { email, password } = req.body;
+  app.post("/signup", async (req, res) => {
+    try {
+      const { email, password } = req.body;
 
-  try {
-    // Check if user already exists
-    const user = await db.collection("users").findOne({ email });
-    if (user) {
-      return res.status(400).send("User already exists");
+      // Check if user already exists
+      const user = await db.collection("users").findOne({ email });
+      if (user) {
+        return res.status(400).send("User already exists");
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create new user
+      const newUser = { email, password: hashedPassword };
+      await db.collection("users").insertOne(newUser);
+
+      return res.status(200).send("Signup successful");
+    } catch (err) {
+      console.error(err);
+      return res.status(400).send(err);
     }
+  });
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+  app.post("/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
 
-    // Create new user
-    const newUser = { email, password: hashedPassword };
-    await db.collection("users").insertOne(newUser);
+      // Find user by email
+      const user = await db.collection("users").findOne({ email });
+      if (!user) {
+        return res.status(400).send("Invalid email or password");
+      }
 
-    return res.status(200).send("Signup successful");
-  } catch (err) {
-    return res.status(400).send(err);
-  }
-});
+      // Compare password
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+        return res.status(400).send("Invalid email or password");
+      }
 
-app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    // Find user by email
-    const user = await db.collection("users").findOne({ email });
-    if (!user) {
-      return res.status(400).send("Invalid email or password");
+      return res.status(200).send("Login successful");
+    } catch (err) {
+      console.error(err);
+      return res.status(400).send(err);
     }
-
-    // Compare password
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(400).send("Invalid email or password");
-    }
-
-    return res.status(200).send("Login successful");
-  } catch (err) {
-    return res.status(400).send(err);
-  }
+  });
 });
 
 // Start the server
