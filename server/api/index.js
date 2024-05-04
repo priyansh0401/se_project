@@ -1,12 +1,8 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
-const dotenv = require("dotenv");
 const cors = require("cors");
-const MongoClient = require("mongodb").MongoClient;
-
-// Load environment variables from.env.local file
-// dotenv.config({ path: ".env.local" });
+const { MongoClient } = require("mongodb");
 
 const app = express();
 // Enable CORS
@@ -22,73 +18,77 @@ app.use((err, req, res, next) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const port = process.env.PORT || 3000;
-
-// MongoDB connection
 const mongoUrl = "mongodb+srv://pgoelbe22:seprojectlogin@login.ijfsgjd.mongodb.net/?retryWrites=true&w=majority&appName=login";
-const dbName = "moneymindslogin";
+const client = new MongoClient(mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
+
 let db;
 
-MongoClient.connect(mongoUrl, (err, client) => {
-  if (err) {
-    console.error(err);
-    return res.status(500).send("Error connecting to MongoDB");
+(async () => {
+  try {
+    await client.connect();
+    db = client.db();
+    console.log("Connected to MongoDB");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
   }
-  db = client.db(dbName);
-  console.log(`Connected to MongoDB database: ${dbName}`);
+})();
 
-  // Define routes only after the database connection is established
-  app.get("/", (req, res) => {
-    const domain = "se-project-server.vercel.app";
-    res.send(`Express on ${domain}`);
-  });
+// User model
+const usersCollection = db.collection("users");
+const port = process.env.PORT || 3000;
 
-  app.post("/signup", async (req, res) => {
-    try {
-      const { email, password } = req.body;
+app.get("/", (req, res) => {
+  const domain = "se-project-server.vercel.app";
+  res.send(`Express on bnb ${domain}`);
+});
 
-      // Check if user already exists
-      const user = await db.collection("users").findOne({ email });
-      if (user) {
-        return res.status(400).send("User already exists");
-      }
+// Routes
+app.post("/signup", async (req, res) => {
+  const { email, password } = req.body;
 
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create new user
-      const newUser = { email, password: hashedPassword };
-      await db.collection("users").insertOne(newUser);
-
-      return res.status(200).send("Signup successful");
-    } catch (err) {
-      console.error(err);
-      return res.status(400).send(err);
+  try {
+    // Check if user already exists
+    const existingUser = await usersCollection.findOne({ email });
+    if (existingUser) {
+      return res.status(400).send("User already exists");
     }
-  });
 
-  app.post("/login", async (req, res) => {
-    try {
-      const { email, password } = req.body;
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Find user by email
-      const user = await db.collection("users").findOne({ email });
-      if (!user) {
-        return res.status(400).send("Invalid email or password");
-      }
+    // Create new user
+    const result = await usersCollection.insertOne({ email, password: hashedPassword });
 
-      // Compare password
-      const validPassword = await bcrypt.compare(password, user.password);
-      if (!validPassword) {
-        return res.status(400).send("Invalid email or password");
-      }
+    return res.status(200).send("Signup successful");
+  } catch (err) {
+    return res.status(400).send(err);
+  }
+});
 
-      return res.status(200).send("Login successful");
-    } catch (err) {
-      console.error(err);
-      return res.status(400).send(err);
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Find user by email
+    const user = await usersCollection.findOne({ email });
+    if (!user) {
+      console.log("bad email");
+      return res.status(400).send("Invalid email or password");
     }
-  });
+
+    // Compare password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      console.log("bad password");
+      return res.status(400).send("Invalid email or password");
+    }
+
+    console.log("success");
+    return res.status(200).send("Login successful");
+  } catch (err) {
+    console.log("catch", err);
+    return res.status(400).send(err);
+  }
 });
 
 // Start the server
