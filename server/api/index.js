@@ -3,7 +3,9 @@ const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
 const cors = require("cors");
-// Load environment variables from .env.local file
+const MongoClient = require("mongodb").MongoClient;
+
+// Load environment variables from.env.local file
 dotenv.config({ path: ".env.local" });
 
 const app = express();
@@ -20,68 +22,66 @@ app.use((err, req, res, next) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// User model
-const users = { email: [""] };
 const port = process.env.PORT || 3000;
 
-app.get("/", (req, res) => {
-  const domain = "se-project-server.vercel.app";
-  res.send(`Express on bnb ${domain}`);
-});
-
-// Routes
-app.post("/signup", async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    // Check if user already exists
-    if (users[email]) {
-      return res.status(400).send("User already exists");
-    }
-
-    // Hash password
-    // const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create new user
-    users[email] = { email, password: password };
-
-    // Store user in Redis
-    // redisClient.set(email, JSON.stringify(users[email]));
-
-    return res.status(200).send("Signup successful");
-  } catch (err) {
-    return res.status(400).send(err);
+// Connect to MongoDB
+MongoClient.connect(process.env.MONGODB_URL, (err, client) => {
+  if (err) {
+    console.error(err);
+    return;
   }
-});
+  console.log("Connected to MongoDB");
+  const db = client.db();
+  const usersCollection = db.collection("users");
 
-app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  // Routes
+  app.post("/signup", async (req, res) => {
+    const { email, password } = req.body;
 
-  try {
-    // Find user by email
-    if (!users[email]) {
-      console.log("bad email");
-      return res.status(400).send("Invalid email or password");
+    try {
+      // Check if user already exists
+      const existingUser = await usersCollection.findOne({ email });
+      if (existingUser) {
+        return res.status(400).send("User already exists");
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create new user
+      const user = { email, password: hashedPassword };
+      await usersCollection.insertOne(user);
+
+      return res.status(200).send("Signup successful");
+    } catch (err) {
+      return res.status(400).send(err);
     }
+  });
 
-    // Compare password
-    const validPassword = password == users[email].password;
-    if (!validPassword) {
-      console.log("bad password");
-      return res.status(400).send("Invalid email or password");
+  app.post("/login", async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+      // Find user by email
+      const user = await usersCollection.findOne({ email });
+      if (!user) {
+        return res.status(400).send("Invalid email or password");
+      }
+
+      // Compare password
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+        return res.status(400).send("Invalid email or password");
+      }
+
+      return res.status(200).send("Login successful");
+    } catch (err) {
+      return res.status(400).send(err);
     }
+  });
 
-    console.log("success");
-    return res.status(200).send("Login successful");
-  } catch (err) {
-    console.log("catch", err);
-    return res.status(400).send(err);
-  }
+  // Start the server
+  app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+  });
 });
-
-// Start the server
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
-
-module.exports = app;
