@@ -3,7 +3,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const { MongoClient } = require("mongodb");
-const bcrypt = require("bcrypt");
+// const bcrypt = require("bcrypt");
 
 const app = express();
 
@@ -59,8 +59,8 @@ usersRouter.post("/signup", async (req, res) => {
     const db = await connect();
     const usersCollection = db.collection("users");
     const { username, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = { username, password: hashedPassword };
+    // const hashedPassword = await bcrypt.hash(password, 10);
+    const user = { username, password: password };
     const result = await usersCollection.insertOne(user);
     res.status(201).send(`User created with id ${result.insertedId}`);
   } catch (error) {
