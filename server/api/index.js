@@ -22,10 +22,12 @@ let db;
 
 (async () => {
   try {
+    // Connect to MongoDB
     await client.connect();
-    db = client.db();
+    db = client.db("your-database-name"); // Replace with your actual database name
     console.log("Connected to MongoDB");
 
+    // Get the users collection
     const usersCollection = db.collection("users");
 
     const port = process.env.PORT || 3000;
