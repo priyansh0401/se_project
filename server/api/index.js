@@ -10,6 +10,7 @@ const app = express();
 // Enable CORS with specific allowed origins and credentials
 const corsOptions = {
   origin: true,
+  credentials: true,
 };
 app.use(cors(corsOptions));
 
@@ -40,11 +41,40 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const usersRouter = express.Router();
 
 usersRouter.post("/signup", async (req, res) => {
-  // ... (same as before)
+  try {
+    const db = await connect();
+    const usersCollection = db.collection("users");
+    const { username, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = { username, password: hashedPassword };
+    const result = await usersCollection.insertOne(user);
+    res.status(201).send(`User created with id ${result.insertedId}`);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Error creating user");
+  }
 });
 
 usersRouter.post("/login", async (req, res) => {
-  // ... (same as before)
+  try {
+    const db = await connect();
+    const usersCollection = db.collection("users");
+    const { username, password } = req.body;
+    const user = await usersCollection.findOne({ username });
+    if (!user) {
+      res.status(401).send("Invalid username or password");
+      return;
+    }
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      res.status(401).send("Invalid username or password");
+      return;
+    }
+    res.send(`Logged in as ${username}`);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Error logging in");
+  }
 });
 
 app.use("/api/users", usersRouter);
