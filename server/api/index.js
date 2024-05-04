@@ -1,110 +1,99 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const dotenv = require("dotenv");
-const { MongoClient } = require("mongodb");
-// const bcrypt = require("bcrypt");
+const express = require('express');
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const bodyParser = require('body-parser');
+const session = require('express-session');
 
 const app = express();
 
-// Enable CORS with specific allowed origins and credentials
-const corsOptions = {
-  origin: true,
-  credentials: true,
-};
-app.use(cors(corsOptions));
+// Connect to the MongoDB database
+mongoose.connect('mongodb+srv://priyansh0401:projectlogin@login.rqsthm7.mongodb.net/?retryWrites=true&w=majority&appName=login', { useNewUrlParser: true, useUnifiedTopology: true });
 
-app.use(bodyParser.json());
-
-dotenv.config({ path: ".env.local" });
-
-const uri = process.env.MONGODB_URL;
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-
-async function connect() {
-  try {
-    if (!client.isConnected()) {
-      await client.connect();
-    }
-    return client.db();
-  } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
-    throw error;
-  }
-}
-
-async function disconnect() {
-  try {
-    if (client.isConnected()) {
-      await client.close();
-    }
-  } catch (error) {
-    console.error("Error disconnecting from MongoDB:", error);
-    throw error;
-  }
-}
-
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Credentials", true);
-  next();
-});
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-const usersRouter = express.Router();
-
-usersRouter.post("/signup", async (req, res) => {
-  try {
-    const db = await connect();
-    const usersCollection = db.collection("users");
-    const { username, password } = req.body;
-    // const hashedPassword = await bcrypt.hash(password, 10);
-    const user = { username, password: password };
-    const result = await usersCollection.insertOne(user);
-    res.status(201).send(`User created with id ${result.insertedId}`);
-  } catch (error) {
-    console.error("Error creating user:", error);
-    res.status(500).send("Error creating user");
+// Create a Mongoose model for users
+const userSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
   }
 });
 
-usersRouter.post("/login", async (req, res) => {
+const User = mongoose.model('User', userSchema);
+
+// Create an Express server
+app.use(bodyParser.json());
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: true
+}));
+
+// Create a route for the login form
+app.post('/login', async (req, res) => {
   try {
-    const db = await connect();
-    const usersCollection = db.collection("users");
-    const { username, password } = req.body;
-    const user = await usersCollection.findOne({ username });
+    const { email, password } = req.body;
+
+    if (!email ||!password) {
+      return res.status(400).send('Email and password are required');
+    }
+
+    const user = await User.findOne({ email });
+
     if (!user) {
-      res.status(401).send("Invalid username or password");
-      return;
+      return res.status(400).send('Invalid email or password');
     }
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      res.status(401).send("Invalid username or password");
-      return;
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).send('Invalid email or password');
     }
-    res.send(`Logged in as ${username}`);
+
+    req.session.user = user;
+
+    res.send('Logged in successfully');
   } catch (error) {
-    console.error("Error logging in:", error);
-    res.status(500).send("Error logging in");
+    console.error(error);
+    res.status(500).send('Error logging in');
   }
 });
 
-app.use("/api/users", usersRouter);
-
-const port = process.env.PORT || 3000;
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-
-process.on("SIGINT", async () => {
+// Create a route for the signup form
+app.post('/signup', async (req, res) => {
   try {
-    await disconnect();
-    process.exit(0);
+    const { email, password } = req.body;
+
+    if (!email ||!password) {
+      return res.status(400).send('Email and password are required');
+    }
+
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(400).send('Email already exists');
+    }
+
+    const user = new User({
+      email,
+      password: await bcrypt.hash(password, 10)
+    });
+
+    await user.save();
+
+    req.session.user = user;
+
+    res.send('Signed up successfully');
   } catch (error) {
-    console.error("Error disconnecting from MongoDB:", error);
-    process.exit(1);
+    console.error(error);
+    res.status(500).send('Error signing up');
   }
+});
+
+// Start the Express server
+app.listen(3000, () => {
+  console.log('Server is listening on port 3000');
 });
