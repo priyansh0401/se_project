@@ -4,6 +4,14 @@ const wrapper = document.querySelector(".wrapper");
 const signUpLink = document.querySelector(".signUp-link");
 const signInLink = document.querySelector(".signIn-link");
 
+
+window.onload = function() {
+  setTimeout(function() {
+    document.querySelector('iframe').style.display = 'none';
+  }, 800);
+};
+
+
 // Switch to the sign-up form
 signUpLink.addEventListener("click", () => {
   wrapper.classList.add("animate-signIn");
