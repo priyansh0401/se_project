@@ -8,7 +8,7 @@ const signInLink = document.querySelector(".signIn-link");
 window.onload = function() {
   setTimeout(function() {
     document.querySelector('iframe').style.display = 'none';
-  }, 1000);
+  }, 2000);
 };
 
 
