@@ -5,7 +5,7 @@
   font-family: "Poppins", sans-serif;
 }
 
-#videoElement {
+/* #videoElement {
   position: fixed;
   top: 0;
   left: 0;
@@ -14,7 +14,7 @@
   object-fit: cover;
   z-index: -1;
   display: none;
-}
+} */
 
 body {
   display: flex;
