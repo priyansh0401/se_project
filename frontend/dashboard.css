@@ -60,6 +60,19 @@ body {
   color: #4255d4;
 }
 
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo img {
+  height: 32px;
+  margin-right: 8px;
+}
+
+
+
+
 @-webkit-keyframes left {
   0% {
     transform: translateX(-30px);
